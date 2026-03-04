@@ -355,7 +355,8 @@ static RValue resolveVariableRead(VMContext* ctx, int16_t instanceType, uint32_t
     if (instanceType >= 0) {
         targetInstance = findInstanceByObjectIndex(ctx, instanceType);
         if (targetInstance == nullptr) {
-            fprintf(stderr, "VM: READ var '%s' on object index %d but no instance found\n", varDef->name, instanceType);
+            GameObject* gameObject = &ctx->dataWin->objt.objects[instanceType];
+            fprintf(stderr, "VM: READ var '%s' on object index %d (%s) but no instance found\n", varDef->name, instanceType, gameObject->name);
             return RValue_makeReal(0.0);
         }
     }
@@ -491,7 +492,8 @@ static void resolveVariableWrite(VMContext* ctx, int16_t instanceType, uint32_t 
     if (instanceType >= 0) {
         targetInstance = findInstanceByObjectIndex(ctx, instanceType);
         if (targetInstance == nullptr) {
-            fprintf(stderr, "VM: WRITE var '%s' on object index %d but no instance found\n", varDef->name, instanceType);
+            GameObject* gameObject = &ctx->dataWin->objt.objects[instanceType];
+            fprintf(stderr, "VM: WRITE var '%s' on object index %d (%s) but no instance found\n", varDef->name, gameObject->name, instanceType);
             return;
         }
     }
