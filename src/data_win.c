@@ -478,10 +478,29 @@ static void parseSPRT(BinaryReader* reader, DataWin* dw) {
         spr->originY = BinaryReader_readInt32(reader);
 
         // Detect special type vs normal: peek next int32
+        // If -1, it's a "special type" sprite (can occur even on GMS 1.4 for SWF/Spine sprites)
+        // For SpriteType::Normal (0), the data after the header is the same as a regular sprite
         int32_t check = BinaryReader_readInt32(reader);
         if (check == -1) {
-            fprintf(stderr, "SPRT: unexpected special type sprite '%s' (GMS2 format not supported)\n", spr->name ? spr->name : "?");
-            exit(1);
+            uint32_t sVersion = BinaryReader_readUint32(reader);
+            uint32_t sSpriteType = BinaryReader_readUint32(reader);
+            if (sSpriteType != 0) {
+                fprintf(stderr, "SPRT: unsupported special sprite type %u for '%s' (only Normal=0 is supported)\n", sSpriteType, spr->name ? spr->name : "?");
+                exit(1);
+            }
+            // GMS2 adds playback speed fields after the sprite type
+            if (dw->gen8.major >= 2) {
+                BinaryReader_skip(reader, 4); // GMS2PlaybackSpeed (float)
+                BinaryReader_skip(reader, 4); // GMS2PlaybackSpeedType (uint32)
+                if (sVersion >= 2) {
+                    BinaryReader_skip(reader, 4); // sequenceOffset
+                    if (sVersion >= 3) {
+                        BinaryReader_skip(reader, 4); // nineSliceOffset
+                    }
+                }
+            }
+            // SpriteType::Normal - read texture list normally
+            check = BinaryReader_readInt32(reader);
         }
 
         // 'check' is the texture count (start of SimpleList)
@@ -520,6 +539,7 @@ static void parseSPRT(BinaryReader* reader, DataWin* dw) {
         } else {
             spr->masks = nullptr;
         }
+
     }
     free(ptrs);
 }
