@@ -950,7 +950,37 @@ static void handlePop(VMContext* ctx, uint32_t instr, const uint8_t* extraData) 
     if (varType == VARTYPE_ARRAY) {
         Variable* varDef = resolveVarDef(ctx, varRef);
         if (varDef->varID == -6) {
-            VMBuiltins_setVariable(ctx, varDef->name, val, arrayIndex);
+            // Resolve target instance for built-in array variable writes (e.g. obj_foo.alarm[0] = 2)
+            if (instanceType >= 0 && 100000 > instanceType) {
+                // Object reference: write to ALL instances of that object
+                Runner* runner = (Runner*) ctx->runner;
+                int32_t instanceCount = (int32_t) arrlen(runner->instances);
+                Instance* savedInstance = (Instance*) ctx->currentInstance;
+                repeat(instanceCount, i) {
+                    Instance* inst = runner->instances[i];
+                    if (!inst->active || !VM_isObjectOrDescendant(ctx->dataWin, inst->objectIndex, instanceType)) continue;
+                    ctx->currentInstance = inst;
+                    VMBuiltins_setVariable(ctx, varDef->name, val, arrayIndex);
+                }
+                ctx->currentInstance = savedInstance;
+            } else if (instanceType >= 0) {
+                // Instance ID reference
+                Instance* target = findInstanceByTarget(ctx, instanceType);
+                if (target != nullptr) {
+                    Instance* savedInstance = (Instance*) ctx->currentInstance;
+                    ctx->currentInstance = target;
+                    VMBuiltins_setVariable(ctx, varDef->name, val, arrayIndex);
+                    ctx->currentInstance = savedInstance;
+                }
+            } else if (instanceType == INSTANCE_OTHER && ctx->otherInstance != nullptr) {
+                Instance* savedInstance = (Instance*) ctx->currentInstance;
+                ctx->currentInstance = (Instance*) ctx->otherInstance;
+                VMBuiltins_setVariable(ctx, varDef->name, val, arrayIndex);
+                ctx->currentInstance = savedInstance;
+            } else {
+                // INSTANCE_SELF or other special types: use current instance
+                VMBuiltins_setVariable(ctx, varDef->name, val, arrayIndex);
+            }
         } else {
             switch (instanceType) {
                 case INSTANCE_LOCAL:
