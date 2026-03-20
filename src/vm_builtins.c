@@ -380,6 +380,8 @@ RValue VMBuiltins_getVariable(VMContext* ctx, const char* name, int32_t arrayInd
     if (strcmp(name, "path_action_continue") == 0) return RValue_makeReal(2.0);
     if (strcmp(name, "path_action_reverse") == 0) return RValue_makeReal(3.0);
 
+    if (strcmp(name, "fps") == 0) return RValue_makeReal(ctx->dataWin->gen8.gms2FPS);
+
     fprintf(stderr, "VM: Unhandled built-in variable read '%s' (arrayIndex=%d)\n", name, arrayIndex);
     return RValue_makeReal(0.0);
 }
@@ -1434,6 +1436,18 @@ static RValue builtinArrayLengthId([[maybe_unused]] VMContext* ctx, [[maybe_unus
         return RValue_makeReal(0.0); \
     }
 
+#define STUB_RETURN_TRUE(name) \
+    static RValue builtin_##name([[maybe_unused]] VMContext* ctx, [[maybe_unused]] RValue* args, [[maybe_unused]] int32_t argCount) { \
+        logStubbedFunction(ctx, #name); \
+        return RValue_makeBool(true); \
+    }
+
+#define STUB_RETURN_VALUE(name, value) \
+    static RValue builtin_##name([[maybe_unused]] VMContext* ctx, [[maybe_unused]] RValue* args, [[maybe_unused]] int32_t argCount) { \
+        logStubbedFunction(ctx, #name); \
+        return RValue_makeReal(value); \
+    }
+
 #define STUB_RETURN_UNDEFINED(name) \
     static RValue builtin_##name([[maybe_unused]] VMContext* ctx, [[maybe_unused]] RValue* args, [[maybe_unused]] int32_t argCount) { \
         logStubbedFunction(ctx, #name); \
@@ -1460,7 +1474,7 @@ STUB_RETURN_ZERO(audio_sound_get_gain)
 STUB_RETURN_ZERO(audio_sound_get_pitch)
 STUB_RETURN_UNDEFINED(audio_master_gain)
 STUB_RETURN_UNDEFINED(audio_group_load)
-STUB_RETURN_ZERO(audio_group_is_loaded)
+STUB_RETURN_TRUE(audio_group_is_loaded)
 STUB_RETURN_UNDEFINED(audio_play_music)
 STUB_RETURN_UNDEFINED(audio_stop_music)
 STUB_RETURN_UNDEFINED(audio_music_gain)
@@ -2954,8 +2968,8 @@ static RValue builtinMakeColourHsv(VMContext* ctx, RValue* args, int32_t argCoun
 }
 
 // Display stubs
-STUB_RETURN_ZERO(display_get_width)
-STUB_RETURN_ZERO(display_get_height)
+STUB_RETURN_VALUE(display_get_width, 640.0)
+STUB_RETURN_VALUE(display_get_height, 480.0)
 
 // place_meeting(x, y, obj) - returns true if the calling instance would collide with obj at position (x, y)
 static RValue builtinPlaceMeeting(VMContext* ctx, RValue* args, int32_t argCount) {
